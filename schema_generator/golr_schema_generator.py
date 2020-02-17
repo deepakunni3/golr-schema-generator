@@ -1,5 +1,7 @@
 import re
 import logging
+from xml.etree.ElementTree import Element
+
 from schema_generator.schema_generator import SchemaGenerator
 
 
@@ -106,19 +108,32 @@ FIELD_TYPES = {
 
 
 class GolrSchemaGenerator(SchemaGenerator):
+    """
+    Class for generating a GOlr Schema XML from a given YAML configuration.
 
+    Parameters
+    ----------
+    config: dict
+        A YAML config with GOlr fields and their descriptions
+    schema_version: float
+        The version of Solr for which this schema is being built (default: ``6.2``)
+
+    """
     closure_label_regex = re.compile('(.*)_closure_label$')
     list_label_regex = re.compile('(.*)_list_label$')
 
     def __init__(self, config, schema_version='6.2'):
-        super(GolrSchemaGenerator, self).__init__(config, schema_version)
+        super(GolrSchemaGenerator, self).__init__(config)
+        self.xml_root.set('version', schema_version)
 
-    def generate_automatic_fields(self, parent_elem, golr_field):
+    def generate_automatic_fields(self, parent_elem: Element, golr_field: dict) -> None:
         """
-        Automatically add fields to the schema based on properties in ``golr_field``
+        Automatically add fields to the schema based on properties of a ``golr_field``.
 
         Parameters
         ----------
+        parent_elem: xml.etree.ElementTree.Element
+            ``xml.etree.ElementTree.Element`` instance of the parent element
         golr_field: dict
             A dictionary containing properties that defines a golr_field
 
@@ -148,12 +163,18 @@ class GolrSchemaGenerator(SchemaGenerator):
             'stored': True
         })
 
-    def generate_all_fields(self, parent_elem):
+    def generate_all_fields(self, parent_elem: Element) -> None:
         """
-        Write all fields
+        Generate all the fields as defined by the YAML configuration.
+
+        Parameters
+        ----------
+        parent_elem: xml.etree.ElementTree.Element
+            ``xml.etree.ElementTree.Element`` instance of the parent element
+
         """
         for golr_field in self.golr_config['fields']:
-            print(golr_field)
+            # TODO: support comments in YAML
             # any comments in the config YAML will be dropped.
             # If comments are a priority then they should be made into a golr_field property.
             field_id = golr_field['id']
@@ -196,7 +217,11 @@ class GolrSchemaGenerator(SchemaGenerator):
                     'dest': searchable_field_id
                 })
 
-    def generate_schema(self):
+    def generate_schema(self) -> None:
+        """
+        Generate the XML schema from GOlr YAML configuration.
+
+        """
         types_elem = self.add_element('types')
         self.write_comment(types_elem, 'Unsplit string for when text needs to be dealt with atomically.')
         self.write_comment(types_elem, 'For example, faceted querying.')
@@ -228,6 +253,3 @@ class GolrSchemaGenerator(SchemaGenerator):
 
         unique_key_elem = self.add_element('uniqueKey')
         unique_key_elem.text = 'id'
-
-
-
