@@ -144,24 +144,24 @@ class GolrSchemaGenerator(SchemaGenerator):
         basename = None
         suffix = None
         if closure_label_regex_match:
-            basename = closure_label_regex_match.groups[0]
+            basename = closure_label_regex_match.groups()[0]
             suffix = "_closure_map"
         if list_label_regex_match:
-            basename = list_label_regex_match.groups[0]
+            basename = list_label_regex_match.groups()[0]
             suffix = "_list_map"
 
         if suffix:
             self.write_comment(parent_elem, f"Automatically created to capture mapping information between {basename}_(list|closure) and {golr_field['id']}")
             self.write_comment(parent_elem, f"It is not indexed for searching (JSON blob), but may be useful to the client.")
 
-        self.add_sub_element(parent_elem, "field", {
-            'name': f'{basename}{suffix}',
-            'type': 'string',
-            'required': False,
-            'multiValued': False,
-            'indexed': False,
-            'stored': True
-        })
+            self.add_sub_element(parent_elem, "field", {
+                'name': f'{basename}{suffix}',
+                'type': 'string',
+                'required': False,
+                'multiValued': False,
+                'indexed': False,
+                'stored': True
+            })
 
     def generate_all_fields(self, parent_elem: Element) -> None:
         """
@@ -174,9 +174,6 @@ class GolrSchemaGenerator(SchemaGenerator):
 
         """
         for golr_field in self.golr_config['fields']:
-            # TODO: support comments in YAML
-            # any comments in the config YAML will be dropped.
-            # If comments are a priority then they should be made into a golr_field property.
             field_id = golr_field['id']
             field_type = golr_field['type']
             field_required = golr_field['required'] if 'required' in golr_field else False
@@ -184,12 +181,17 @@ class GolrSchemaGenerator(SchemaGenerator):
             field_indexed = golr_field['indexed'] if 'indexed' in golr_field else False
             field_searchable = golr_field['searchable'] if 'searchable' in golr_field else False
             field_cardinality = golr_field['cardinality'] if 'cardinality' in golr_field else 'single'
+            field_description = golr_field['description'] if 'description' in golr_field else None
 
             if field_id == 'id':
                 golr_field['required'] = True
 
             if field_cardinality == 'single':
                 field_multi = False
+
+            if field_description:
+                comment = f"{self.golr_config['id']}: {field_description}"
+                self.write_comment(parent_elem, comment)
 
             self.add_sub_element(parent_elem, 'field', {
                 'name': field_id,
@@ -216,6 +218,7 @@ class GolrSchemaGenerator(SchemaGenerator):
                     'source': field_id,
                     'dest': searchable_field_id
                 })
+            self.generate_automatic_fields(parent_elem, golr_field)
 
     def generate_schema(self) -> None:
         """
@@ -226,10 +229,14 @@ class GolrSchemaGenerator(SchemaGenerator):
         self.write_comment(types_elem, 'Unsplit string for when text needs to be dealt with atomically.')
         self.write_comment(types_elem, 'For example, faceted querying.')
 
+        for field_type in FIELD_TYPES:
+            if field_type == 'text_searchable':
+                self.write_comment(types_elem, 'Any string with spaces that needs to be treated for searching purposes.')
+                self.write_comment(types_elem, 'This will be automatically used in cases where \"searchable: true\" has been specified in the YAML')
+            self.add_sub_element(types_elem, 'fieldType', FIELD_TYPES[field_type])
+
         fields_elem = self.add_element('fields')
         self.write_comment(fields_elem, 'A special static/fixed (by YAML conf file) field all documents have.')
-        for field_type in FIELD_TYPES:
-            self.add_sub_element(types_elem, 'fieldType', FIELD_TYPES[field_type])
 
         self.add_sub_element(fields_elem, 'field', {
             'name': 'document_category',
