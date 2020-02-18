@@ -1,7 +1,7 @@
 import logging
 from xml.dom import minidom
 
-from utils.golr_utils import parse_config
+from golr_schema_generator.utils.golr_utils import parse_config
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring
 
 class SchemaGenerator:
@@ -11,11 +11,11 @@ class SchemaGenerator:
 
     Parameters
     ----------
-    config: dict
-        A YAML config with GOlr fields and their descriptions
+    config: str
+        A YAML config filename with GOlr fields and their descriptions
 
     """
-    def __init__(self, config: dict):
+    def __init__(self, config: str):
         self.golr_config = parse_config(config)
         self.xml_root = Element('schema')
         self.xml_root.set('name', 'golr')
@@ -135,11 +135,21 @@ class SchemaGenerator:
         c = Comment(comment)
         elem.append(c)
 
-    def export_schema(self):
+    def export_schema(self, filename: str = None) -> None:
         """
         Export the XML schema.
+
+        Parameters
+        ----------
+        filename: str
+            A filename to write the XML
+
         """
-        print(self.prettify())
+        if filename:
+            WH = open(filename, 'w')
+            WH.write(self.prettify())
+        else:
+            print(self.prettify())
 
     def prettify(self, indent: str = "  ") -> str:
         """

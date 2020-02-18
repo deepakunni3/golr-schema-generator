@@ -2,7 +2,7 @@ import re
 import logging
 from xml.etree.ElementTree import Element
 
-from schema_generator.schema_generator import SchemaGenerator
+from golr_schema_generator.schema_generator import SchemaGenerator
 
 
 # TODO: move to JSON
@@ -113,8 +113,8 @@ class GolrSchemaGenerator(SchemaGenerator):
 
     Parameters
     ----------
-    config: dict
-        A YAML config with GOlr fields and their descriptions
+    config: str
+        A YAML config filename with GOlr fields and their descriptions
     schema_version: float
         The version of Solr for which this schema is being built (default: ``6.2``)
 
@@ -122,7 +122,7 @@ class GolrSchemaGenerator(SchemaGenerator):
     closure_label_regex = re.compile('(.*)_closure_label$')
     list_label_regex = re.compile('(.*)_list_label$')
 
-    def __init__(self, config, schema_version='6.2'):
+    def __init__(self, config: str, schema_version: float = '6.2'):
         super(GolrSchemaGenerator, self).__init__(config)
         self.xml_root.set('version', schema_version)
 
